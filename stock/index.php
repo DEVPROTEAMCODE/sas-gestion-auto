@@ -28,6 +28,34 @@ $currentUser = [
 
 // Inclure l'en-tête
 include $root_path . '/includes/header.php';
+
+// Récupérer la liste des fournisseurs
+$database = new Database();
+$db = $database->getConnection();
+$query = "SELECT ID_Fournisseur, Code_Fournisseur FROM fournisseurs ORDER BY Code_Fournisseur";
+$stmt = $db->prepare($query);
+$stmt->execute();
+$fournisseurs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+<?php
+// Assurez-vous que session_start() est appelé au début du fichier
+
+// Afficher les messages de succès
+if (isset($_SESSION['success'])) {
+    echo '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">' . htmlspecialchars($_SESSION['success']) . '</span>
+          </div>';
+    // Supprimer le message après l'avoir affiché pour qu'il ne s'affiche qu'une fois
+    unset($_SESSION['success']);
+}
+
+// Afficher les messages d'erreur (si vous en avez)
+if (isset($_SESSION['error'])) {
+    echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">' . htmlspecialchars($_SESSION['error']) . '</span>
+          </div>';
+    unset($_SESSION['error']);
+}
 ?>
 
 <div class="flex h-screen bg-gray-100">
@@ -94,9 +122,6 @@ include $root_path . '/includes/header.php';
                             <h2 class="text-gray-600 text-sm font-medium">Total Articles</h2>
                             <p class="text-2xl font-semibold text-gray-800">
                                 <?php
-                                    $database = new Database();
-                                    $db = $database->getConnection();
-                                    
                                     $query = "SELECT COUNT(*) as total FROM articles";
                                     $stmt = $db->prepare($query);
                                     $stmt->execute();
@@ -236,7 +261,7 @@ include $root_path . '/includes/header.php';
                 }
                 
                 if (isset($_GET['categorie']) && !empty($_GET['categorie'])) {
-                    $where_conditions[] = "a.categorie = :categorie";
+                    $where_conditions[] = "a.categorie_id = :categorie";
                     $params[':categorie'] = $_GET['categorie'];
                 }
                 
@@ -309,9 +334,6 @@ include $root_path . '/includes/header.php';
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Prix Vente
                                 </th>
-                                <!-- <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    TVA
-                                </th> -->
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Emplacement
                                 </th>
@@ -364,7 +386,6 @@ include $root_path . '/includes/header.php';
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <?php echo number_format($article['prix_vente_ht'], 2, ',', ' '); ?> DH
                                         </td>
-                                        
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <?php echo htmlspecialchars($article['emplacement']); ?>
                                         </td>
@@ -381,7 +402,7 @@ include $root_path . '/includes/header.php';
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                     </svg>
                                                 </a>
-                                                <a href="javascript:void(0)" onclick="openStockModal(<?php echo $article['id']; ?>, '<?php echo htmlspecialchars($article['reference']); ?>', '<?php echo htmlspecialchars($article['designation']); ?>')" class="text-green-600 hover:text-green-900" title="Ajuster le stock">
+                                                <a href="javascript:void(0)" onclick="openStockModal(<?php echo $article['id']; ?>, '<?php echo htmlspecialchars($article['reference']); ?>', '<?php echo htmlspecialchars($article['designation']); ?>', <?php echo $article['quantite_stock']; ?>)" class="text-green-600 hover:text-green-900" title="Ajuster le stock">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
                                                     </svg>
@@ -433,7 +454,6 @@ include $root_path . '/includes/header.php';
                             // Afficher les numéros de page
                             $max_visible_pages = 3; // Nombre maximum de boutons de page à afficher
                             
-                            // Calculer les pages à afficher
                             if ($total_pages <= $max_visible_pages) {
                                 $start_page = 1;
                                 $end_page = $total_pages;
@@ -500,32 +520,54 @@ include $root_path . '/includes/header.php';
                             </div>
                             <form action="update_stock.php" method="POST">
                                 <input type="hidden" id="article_id" name="article_id">
+                                <input type="hidden" id="current_stock" name="current_stock">
                                 <div class="px-6 py-4">
                                     <div class="mb-4">
                                         <p class="text-gray-700">Article: <span id="article_info" class="font-medium"></span></p>
+                                        <p class="text-gray-700 mt-1">Stock actuel: <span id="stock_info" class="font-medium"></span></p>
                                     </div>
                                     <div class="mb-4">
                                         <label for="type_mouvement" class="block text-sm font-medium text-gray-700 mb-1">Type de mouvement</label>
-                                        <select id="type_mouvement" name="type_mouvement" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                            <option value="entree">Réception</option>
-                                            <option value="sortie">Modification</option>
-                                            <option value="ajustement">Retour</option>
+                                        <select id="type_mouvement" name="type_mouvement" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="toggleMouvementOptions()">
+                                            <option value="reception">Réception</option>
+                                            <option value="modification">Modification</option>
+                                            <option value="retour">Retour</option>
                                         </select>
                                     </div>
-                                    <div class="mb-4">
-                                        <label for="quantite" class="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-                                        <input type="number" id="quantite" name="quantite" min="1" value="1" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    
+                                    <!-- Champ pour la réception (ajouter au stock) -->
+                                    <div id="reception_fields">
+                                        <div class="mb-4">
+                                            <label for="quantite_reception" class="block text-sm font-medium text-gray-700 mb-1">Quantité à ajouter</label>
+                                            <input type="number" id="quantite_reception" name="quantite_reception" min="1" value="1" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="fournisseur_id" class="block text-sm font-medium text-gray-700 mb-1">Fournisseur</label>
+                                            <select id="fournisseur_id" name="fournisseur_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                <option value="">Sélectionner un fournisseur</option>
+                                                <?php foreach ($fournisseurs as $fournisseur): ?>
+                                                    <option value="<?php echo $fournisseur['ID_Fournisseur']; ?>"><?php echo htmlspecialchars($fournisseur['Code_Fournisseur']); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="mb-4">
-                                        <label for="motif" class="block text-sm font-medium text-gray-700 mb-1">Motif</label>
-                                        <select id="motif" name="motif" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                            <option value="achat">Réception</option>
-                                            <option value="vente">Modification</option>
-                                            <option value="retour_client">Retour</option>
-                                            <option value="retour_fournisseur">Autre</option>
-                                          
-                                        </select>
+                                    
+                                    <!-- Champ pour la modification directe du stock -->
+                                    <div id="modification_fields" style="display: none;">
+                                        <div class="mb-4">
+                                            <label for="quantite_modification" class="block text-sm font-medium text-gray-700 mb-1">Nouvelle quantité en stock</label>
+                                            <input type="number" id="quantite_modification" name="quantite_modification" min="0" value="0" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        </div>
                                     </div>
+                                    
+                                    <!-- Champ pour le retour -->
+                                    <div id="retour_fields" style="display: none;">
+                                        <div class="mb-4">
+                                            <label for="quantite_retour" class="block text-sm font-medium text-gray-700 mb-1">Quantité à retourner</label>
+                                            <input type="number" id="quantite_retour" name="quantite_retour" min="1" value="1" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        </div>
+                                    </div>
+                                    
                                     <div class="mb-4">
                                         <label for="commentaire" class="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
                                         <textarea id="commentaire" name="commentaire" rows="2" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
@@ -558,19 +600,50 @@ include $root_path . '/includes/header.php';
                             modal.classList.add('hidden');
                         }
                         
-                        function openStockModal(id, reference, designation) {
+                        function openStockModal(id, reference, designation, stock) {
                             const modal = document.getElementById('stockModal');
                             const articleIdInput = document.getElementById('article_id');
+                            const currentStockInput = document.getElementById('current_stock');
                             const articleInfoSpan = document.getElementById('article_info');
+                            const stockInfoSpan = document.getElementById('stock_info');
+                            const quantiteModificationInput = document.getElementById('quantite_modification');
                             
                             modal.classList.remove('hidden');
                             articleIdInput.value = id;
+                            currentStockInput.value = stock;
                             articleInfoSpan.textContent = reference + ' - ' + designation;
+                            stockInfoSpan.textContent = stock;
+                            quantiteModificationInput.value = stock;
+                            
+                            // Reset to default view (reception)
+                            document.getElementById('type_mouvement').value = 'reception';
+                            toggleMouvementOptions();
                         }
                         
                         function closeStockModal() {
                             const modal = document.getElementById('stockModal');
                             modal.classList.add('hidden');
+                        }
+                        
+                        function toggleMouvementOptions() {
+                            const typeMouvement = document.getElementById('type_mouvement').value;
+                            const receptionFields = document.getElementById('reception_fields');
+                            const modificationFields = document.getElementById('modification_fields');
+                            const retourFields = document.getElementById('retour_fields');
+                            
+                            // Cacher tous les champs
+                            receptionFields.style.display = 'none';
+                            modificationFields.style.display = 'none';
+                            retourFields.style.display = 'none';
+                            
+                            // Afficher les champs appropriés selon le type de mouvement
+                            if (typeMouvement === 'reception') {
+                                receptionFields.style.display = 'block';
+                            } else if (typeMouvement === 'modification') {
+                                modificationFields.style.display = 'block';
+                            } else if (typeMouvement === 'retour') {
+                                retourFields.style.display = 'block';
+                            }
                         }
                         
                         // Close modals when clicking outside
@@ -586,39 +659,6 @@ include $root_path . '/includes/header.php';
                                 closeStockModal();
                             }
                         });
-                        
-                        // Update motif options based on movement type
-                        document.getElementById('type_mouvement').addEventListener('change', function() {
-                            const typeValue = this.value;
-                            const motifSelect = document.getElementById('motif');
-                            
-                            // Clear existing options
-                            motifSelect.innerHTML = '';
-                            
-                            // Add options based on movement type
-                            if (typeValue === 'entree') {
-                                addOption(motifSelect, 'achat', 'Achat');
-                                addOption(motifSelect, 'retour_client', 'Retour client');
-                                addOption(motifSelect, 'inventaire', 'Correction d\'inventaire');
-                                addOption(motifSelect, 'autre', 'Autre');
-                            } else if (typeValue === 'sortie') {
-                                addOption(motifSelect, 'vente', 'Vente');
-                                addOption(motifSelect, 'retour_fournisseur', 'Retour fournisseur');
-                                addOption(motifSelect, 'perte', 'Perte/Casse');
-                                addOption(motifSelect, 'inventaire', 'Correction d\'inventaire');
-                                addOption(motifSelect, 'autre', 'Autre');
-                            } else {
-                                addOption(motifSelect, 'inventaire', 'Correction d\'inventaire');
-                                addOption(motifSelect, 'autre', 'Autre');
-                            }
-                        });
-                        
-                        function addOption(selectElement, value, text) {
-                            const option = document.createElement('option');
-                            option.value = value;
-                            option.textContent = text;
-                            selectElement.appendChild(option);
-                        }
                     </script>
                 </div>
             </div>

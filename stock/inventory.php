@@ -83,16 +83,18 @@ $total_result = $count_stmt->fetch(PDO::FETCH_ASSOC);
 $total_mouvements = $total_result['total'];
 $total_pages = ceil($total_mouvements / $mouvements_per_page);
 
-// Récupérer les mouvements de stock pour la page courante
+// Récupérer les mouvements de stock pour la page courante - SANS la jointure problématique
 $query = "SELECT h.ID_Historique, h.ID_Article, h.ID_Commande, h.Type_Operation, 
           h.Date_Operation, h.Quantite, h.Prix_Unitaire, h.Utilisateur, h.Commentaire,
-          a.reference, a.designation, c.Numero_Commande
+          a.reference, a.designation, c.Numero_Commande, f.Code_Fournisseur, h.ID_Fournisseur
           FROM historique_articles h
           LEFT JOIN articles a ON h.ID_Article = a.id
           LEFT JOIN commandes c ON h.ID_Commande = c.ID_Commande
+          LEFT JOIN fournisseurs f ON h.ID_Fournisseur = f.ID_Fournisseur
           $where_clause
           ORDER BY h.Date_Operation DESC
           LIMIT :limit OFFSET :offset";
+
 $stmt = $db->prepare($query);
 foreach ($params as $key => $value) {
     $stmt->bindValue($key, $value);
@@ -101,6 +103,28 @@ $stmt->bindParam(':limit', $mouvements_per_page, PDO::PARAM_INT);
 $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $mouvements = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Récupérer les informations utilisateur pour chaque mouvement sans cache
+foreach ($mouvements as &$mouvement) {
+    $user_id = $mouvement['Utilisateur']; // Utilisateur contient l'ID
+    if (!empty($user_id)) {
+        $user_query = "SELECT nom, prenom FROM users WHERE id = :user_id";
+        $user_stmt = $db->prepare($user_query);
+        $user_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+        $user_stmt->execute();
+        $user_data = $user_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($user_data) {
+            $mouvement['nom'] = $user_data['nom'];
+            $mouvement['prenom'] = $user_data['prenom'];
+        } else {
+            $mouvement['nom'] = '';
+            $mouvement['prenom'] = '';
+        }
+    } else {
+        $mouvement['nom'] = '';
+        $mouvement['prenom'] = '';
+    }
+}
 
 // Récupérer la liste des articles pour le filtre
 $articles_query = "SELECT id, reference, designation FROM articles ORDER BY reference";
@@ -132,6 +156,16 @@ include $root_path . '/includes/header.php';
 
         <!-- Content -->
         <div class="container mx-auto px-6 py-8">
+            <!-- Bouton de retour -->
+            <div class="mb-6">
+                <a href="index.php" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Retour à l'accueil
+                </a>
+            </div>
+
             <!-- Filtres -->
             <div class="mb-6 p-4 bg-white rounded-lg shadow">
                 <form method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -263,7 +297,7 @@ include $root_path . '/includes/header.php';
                             <h2 class="text-gray-600 text-sm font-medium">Ajustements</h2>
                             <p class="text-2xl font-semibold text-gray-800">
                                 <?php
-                                    $query = "SELECT COUNT(*) as total FROM historique_articles WHERE Type_Operation = 'Ajustment'";
+                                    $query = "SELECT COUNT(*) as total FROM historique_articles WHERE Type_Operation = 'Modification'";
                                     $stmt = $db->prepare($query);
                                     $stmt->execute();
                                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -315,7 +349,7 @@ include $root_path . '/includes/header.php';
                                     Prix Unitaire
                                 </th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Commande
+                                    Commande/Fournisseur
                                 </th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Utilisateur
@@ -375,23 +409,32 @@ include $root_path . '/includes/header.php';
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-900 font-medium">
-                                                <?php echo htmlspecialchars($mouvement['Quantite']); ?>
+                                                <?php echo intval($mouvement['Quantite']); ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <?php echo number_format($mouvement['Prix_Unitaire'], 2, ',', ' '); ?> DH
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <?php if (!empty($mouvement['Numero_Commande'])): ?>
-                                                <a href="../commandes/view.php?id=<?php echo $mouvement['ID_Commande']; ?>" class="text-indigo-600 hover:text-indigo-900">
-                                                    #<?php echo htmlspecialchars($mouvement['Numero_Commande']); ?>
+                                            <?php if ($mouvement['Type_Operation'] == 'Réception' && !empty($mouvement['ID_Fournisseur'])): ?>
+                                                <a href="../fournisseurs/view.php?id=<?php echo $mouvement['ID_Fournisseur']; ?>" class="text-green-600 hover:text-green-900">
+                                                    <?php echo htmlspecialchars($mouvement['Code_Fournisseur'] ??  $mouvement['Code_Fournisseur']); ?>
+                                                  
+                                                </a>
+                                            <?php elseif (($mouvement['Type_Operation'] == 'Commande' || $mouvement['Type_Operation'] == 'Annulation') && !empty($mouvement['Numero_Commande'])): ?>
+                                                <a href="../orders/view.php?id=<?php echo $mouvement['ID_Commande']; ?>" class="text-indigo-600 hover:text-indigo-900">
+                                                    <?php echo htmlspecialchars($mouvement['Numero_Commande']); ?>
                                                 </a>
                                             <?php else: ?>
                                                 <span class="text-gray-500">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <?php echo htmlspecialchars($mouvement['Utilisateur']); ?>
+                                            <?php if (!empty($mouvement['nom']) && !empty($mouvement['prenom'])): ?>
+                                                <?php echo htmlspecialchars($mouvement['prenom'] . ' ' . $mouvement['nom']); ?>
+                                            <?php else: ?>
+                                                <?php echo htmlspecialchars($mouvement['Utilisateur']); ?>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="text-sm text-gray-900">
@@ -424,7 +467,7 @@ include $root_path . '/includes/header.php';
                         <!-- Bouton Précédent -->
                         <?php if ($current_page > 1): ?>
                             <a href="?page=<?php echo $current_page - 1; ?><?php echo isset($_GET['search']) ? '&search=' . urlencode($_GET['search']) : ''; ?><?php echo isset($_GET['type_operation']) ? '&type_operation=' . urlencode($_GET['type_operation']) : ''; ?><?php echo isset($_GET['date_debut']) ? '&date_debut=' . urlencode($_GET['date_debut']) : ''; ?><?php echo isset($_GET['date_fin']) ? '&date_fin=' . urlencode($_GET['date_fin']) : ''; ?><?php echo isset($_GET['article_id']) ? '&article_id=' . urlencode($_GET['article_id']) : ''; ?>" 
-                               class="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            class="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
                                 Précédent
                             </a>
                         <?php else: ?>
