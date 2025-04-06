@@ -92,15 +92,19 @@ $totalVehicules = $stmtTotal->fetchColumn();
 $totalPages = ceil($totalVehicules / $vehiculesParPage);
 
 // Requête paginée pour les véhicules
+// Requête paginée pour les véhicules
 $query = "SELECT v.id, v.immatriculation, v.marque, v.modele, v.annee, 
-          CONCAT(c.nom, ' ', c.prenom) AS client, c.id AS client_id,
+          c.id AS client_id, c.nom, c.prenom, c.raison_sociale, c.telephone, c.email,
+          tc.type AS type_client,
           v.kilometrage, v.statut, v.couleur, v.carburant, v.puissance,
           v.date_mise_circulation, v.date_derniere_revision, v.date_prochain_ct, v.notes
           FROM vehicules v 
           LEFT JOIN clients c ON v.client_id = c.id 
+          LEFT JOIN type_client tc ON c.type_client_id = tc.id
           $whereString
           ORDER BY v.date_creation DESC
           LIMIT :debut, :vehiculesParPage";
+
 
 $stmt = $db->prepare($query);
 $stmt->bindValue(':debut', $debut, PDO::PARAM_INT);
@@ -207,7 +211,7 @@ include '../includes/header.php';
                         </div>
                     </div>
                     <div class="mt-4">
-                        <a href="index.php" class="text-blue-500 hover:text-blue-700 text-sm font-semibold">Voir tous les véhicules →</a>
+                        <a href="view.php" class="text-blue-500 hover:text-blue-700 text-sm font-semibold">Voir tous les véhicules →</a>
                     </div>
                 </div>
 
@@ -227,7 +231,7 @@ include '../includes/header.php';
                         </div>
                     </div>
                     <div class="mt-4">
-                        <a href="index.php?status=maintenance" class="text-yellow-500 hover:text-yellow-700 text-sm font-semibold">Voir les détails →</a>
+                        <a href="view.php?status=maintenance" class="text-yellow-500 hover:text-yellow-700 text-sm font-semibold">Voir les détails →</a>
                     </div>
                 </div>
 
@@ -375,7 +379,7 @@ include '../includes/header.php';
                 </div>
 
                 <!-- Search and Filter -->
-                <form action="index.php" method="GET" class="flex flex-col md:flex-row gap-4 mb-6">
+                <form action="view.php" method="GET" class="flex flex-col md:flex-row gap-4 mb-6">
                     <div class="relative flex-1">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -427,7 +431,16 @@ include '../includes/header.php';
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($vehicle['marque']); ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($vehicle['modele']); ?></td>
                                         <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($vehicle['annee']); ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($vehicle['client']); ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <?php 
+                                            if ($vehicle['type_client'] == 'societe' && !empty($vehicle['raison_sociale'])) {
+                                                echo htmlspecialchars($vehicle['raison_sociale']);
+                                            } else {
+                                                echo htmlspecialchars($vehicle['nom'] . ' ' . $vehicle['prenom']);
+                                            }
+                                            ?>
+                                        </td>
+
                                         <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo number_format($vehicle['kilometrage'], 0, ',', ' '); ?> km</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <?php
@@ -817,16 +830,14 @@ include '../includes/header.php';
                 <button type="button" onclick="closeModal('viewVehicleModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                     Fermer
                 </button>
-                <button type="button" onclick="editVehicleFromView()" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <a id="edit_vehicle_link" href="#" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                     Modifier
-                </button>
-                <a id="add_intervention_link" href="#" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                    Ajouter une intervention
                 </a>
             </div>
         </div>
     </div>
 </div>
+
 
 <!-- Edit Vehicle Modal -->
 <div id="editVehicleModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
@@ -1021,126 +1032,126 @@ include '../includes/header.php';
 
     // Fonction pour afficher les détails d'un véhicule
     function viewVehicle(id) {
-        currentVehicleId = id;
-        
-        // Faire une requête AJAX pour récupérer les détails du véhicule
-        fetch(`get_vehicle.php?id=${id}`)
-            .then(response => response.json())
-            .then(data => {
-                currentVehicleData = data;
-                
-                // Remplir les champs du modal avec les données reçues
-                document.getElementById('view_immatriculation').textContent = data.immatriculation || '-';
-                document.getElementById('view_marque').textContent = data.marque || '-';
-                document.getElementById('view_modele').textContent = data.modele || '-';
-                document.getElementById('view_annee').textContent = data.annee || '-';
-                document.getElementById('view_couleur').textContent = data.couleur || '-';
-                document.getElementById('view_carburant').textContent = data.carburant || '-';
-                document.getElementById('view_puissance').textContent = data.puissance ? `${data.puissance} CV` : '-';
-                
-                document.getElementById('view_client').textContent = data.client || '-';
-                document.getElementById('view_telephone').textContent = data.telephone || '-';
-                document.getElementById('view_email').textContent = data.email || '-';
-                
-                document.getElementById('view_kilometrage').textContent = data.kilometrage ? `${data.kilometrage} km` : '-';
-                document.getElementById('view_date_mise_circulation').textContent = data.date_mise_circulation || '-';
-                document.getElementById('view_date_derniere_revision').textContent = data.date_derniere_revision || '-';
-                document.getElementById('view_date_prochain_ct').textContent = data.date_prochain_ct || '-';
-                
-                // Afficher le statut avec la bonne classe CSS
-                let statusClass = '';
-                let statusText = '';
-                
-                switch (data.statut) {
-                    case 'actif':
-                        statusClass = 'bg-green-100 text-green-800';
-                        statusText = 'Actif';
-                        break;
-                    case 'maintenance':
-                        statusClass = 'bg-yellow-100 text-yellow-800';
-                        statusText = 'En maintenance';
-                        break;
-                    case 'inactif':
-                        statusClass = 'bg-red-100 text-red-800';
-                        statusText = 'Inactif';
-                        break;
-                    default:
-                        statusClass = 'bg-gray-100 text-gray-800';
-                        statusText = data.statut || '-';
-                }
-                
-                document.getElementById('view_statut').innerHTML = `
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                        ${statusText}
-                    </span>
-                `;
-                
-                document.getElementById('view_notes').textContent = data.notes || 'Aucune note disponible';
-                
-                // Mettre à jour le lien pour ajouter une intervention
-                document.getElementById('add_intervention_link').href = `../interventions/create.php?vehicule_id=${id}`;
-                
-                // Afficher les interventions
-                const interventionsTable = document.getElementById('view_interventions');
-                interventionsTable.innerHTML = '';
-                
-                if (data.interventions && data.interventions.length > 0) {
-                    data.interventions.forEach(intervention => {
-                        let statusClass = '';
-                        let statusText = '';
-                        
-                        switch (intervention.statut) {
-                            case 'En attente':
-                                statusClass = 'bg-blue-100 text-blue-800';
-                                break;
-                            case 'En cours':
-                                statusClass = 'bg-yellow-100 text-yellow-800';
-                                break;
-                            case 'Terminée':
-                                statusClass = 'bg-green-100 text-green-800';
-                                break;
-                            case 'Facturée':
-                                statusClass = 'bg-purple-100 text-purple-800';
-                                break;
-                            case 'Annulée':
-                                statusClass = 'bg-red-100 text-red-800';
-                                break;
-                            default:
-                                statusClass = 'bg-gray-100 text-gray-800';
-                        }
-                        
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.date_creation || '-'}</td>
-                            <td class="px-6 py-4 text-sm text-gray-500">${intervention.description || '-'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                                    ${intervention.statut || '-'}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.kilometrage ? `${intervention.kilometrage} km` : '-'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.technicien || '-'}</td>
-                        `;
-                        interventionsTable.appendChild(row);
-                    });
-                } else {
+    currentVehicleId = id;
+    
+    // Faire une requête AJAX pour récupérer les détails du véhicule
+    fetch(`get_vehicle.php?id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            currentVehicleData = data;
+            
+            // Remplir les champs du modal avec les données reçues
+            document.getElementById('view_immatriculation').textContent = data.immatriculation || '-';
+            document.getElementById('view_marque').textContent = data.marque || '-';
+            document.getElementById('view_modele').textContent = data.modele || '-';
+            document.getElementById('view_annee').textContent = data.annee || '-';
+            document.getElementById('view_couleur').textContent = data.couleur || '-';
+            document.getElementById('view_carburant').textContent = data.carburant || '-';
+            document.getElementById('view_puissance').textContent = data.puissance ? `${data.puissance} CV` : '-';
+            
+            document.getElementById('view_client').textContent = data.client || '-';
+            document.getElementById('view_telephone').textContent = data.telephone || '-';
+            document.getElementById('view_email').textContent = data.email || '-';
+            
+            document.getElementById('view_kilometrage').textContent = data.kilometrage ? `${data.kilometrage} km` : '-';
+            document.getElementById('view_date_mise_circulation').textContent = data.date_mise_circulation || '-';
+            document.getElementById('view_date_derniere_revision').textContent = data.date_derniere_revision || '-';
+            document.getElementById('view_date_prochain_ct').textContent = data.date_prochain_ct || '-';
+            
+            // Afficher le statut avec la bonne classe CSS
+            let statusClass = '';
+            let statusText = '';
+            
+            switch (data.statut) {
+                case 'actif':
+                    statusClass = 'bg-green-100 text-green-800';
+                    statusText = 'Actif';
+                    break;
+                case 'maintenance':
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                    statusText = 'En maintenance';
+                    break;
+                case 'inactif':
+                    statusClass = 'bg-red-100 text-red-800';
+                    statusText = 'Inactif';
+                    break;
+                default:
+                    statusClass = 'bg-gray-100 text-gray-800';
+                    statusText = data.statut || '-';
+            }
+            
+            document.getElementById('view_statut').innerHTML = `
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${statusText}
+                </span>
+            `;
+            
+            document.getElementById('view_notes').textContent = data.notes || 'Aucune note disponible';
+            
+            // Mettre à jour le lien pour modifier le véhicule
+            document.getElementById('edit_vehicle_link').href = `edit.php?id=${id}`;
+            
+            // Afficher les interventions
+            const interventionsTable = document.getElementById('view_interventions');
+            interventionsTable.innerHTML = '';
+            
+            if (data.interventions && data.interventions.length > 0) {
+                data.interventions.forEach(intervention => {
+                    let statusClass = '';
+                    let statusText = '';
+                    
+                    switch (intervention.statut) {
+                        case 'En attente':
+                            statusClass = 'bg-blue-100 text-blue-800';
+                            break;
+                        case 'En cours':
+                            statusClass = 'bg-yellow-100 text-yellow-800';
+                            break;
+                        case 'Terminée':
+                            statusClass = 'bg-green-100 text-green-800';
+                            break;
+                        case 'Facturée':
+                            statusClass = 'bg-purple-100 text-purple-800';
+                            break;
+                        case 'Annulée':
+                            statusClass = 'bg-red-100 text-red-800';
+                            break;
+                        default:
+                            statusClass = 'bg-gray-100 text-gray-800';
+                    }
+                    
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                            Aucune intervention enregistrée pour ce véhicule
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.date_creation || '-'}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${intervention.description || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${intervention.statut || '-'}
+                            </span>
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.kilometrage ? `${intervention.kilometrage} km` : '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${intervention.technicien || '-'}</td>
                     `;
                     interventionsTable.appendChild(row);
-                }
-                
-                // Ouvrir la modal
-                openModal('viewVehicleModal');
-            })
-            .catch(error => {
-                console.error('Erreur lors de la récupération des détails du véhicule:', error);
-                alert('Une erreur est survenue lors de la récupération des détails du véhicule.');
-            });
-    }
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                        Aucune intervention enregistrée pour ce véhicule
+                    </td>
+                `;
+                interventionsTable.appendChild(row);
+            }
+            
+            // Ouvrir la modal
+            openModal('viewVehicleModal');
+        })
+        .catch(error => {
+            console.error('Erreur lors de la récupération des détails du véhicule:', error);
+            alert('Une erreur est survenue lors de la récupération des détails du véhicule.');
+        });
+}
 
     // Fonction pour éditer un véhicule
     function editVehicle(id) {

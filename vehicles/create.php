@@ -160,7 +160,7 @@ include $root_path . '/includes/header.php';
                     </li>
                     <li class="mx-2">/</li>
                     <li>
-                        <a href="index.php" class="hover:text-indigo-600">Véhicules</a>
+                        <a href="view.php" class="hover:text-indigo-600">Véhicules</a>
                     </li>
                     <li class="mx-2">/</li>
                     <li class="text-gray-800 font-medium">Ajouter</li>
@@ -173,7 +173,7 @@ include $root_path . '/includes/header.php';
                     <p class="font-bold">Succès!</p>
                     <p>Le véhicule a été créé avec succès.</p>
                     <div class="mt-2">
-                        <a href="index.php" class="text-green-600 hover:underline font-medium">Retourner à la liste des véhicules</a>
+                        <a href="view.php" class="text-green-600 hover:underline font-medium">Retourner à la liste des véhicules</a>
                         ou
                         <a href="create.php" class="text-green-600 hover:underline font-medium">Ajouter un autre véhicule</a>
                     </div>
@@ -358,7 +358,7 @@ include $root_path . '/includes/header.php';
                         
                         <!-- Form Actions -->
                         <div class="mt-8 flex justify-end space-x-3">
-                            <a href="index.php" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            <a href="view.php" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
                                 Annuler
                             </a>
                             <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">

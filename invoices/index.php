@@ -21,10 +21,29 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    $query = "SELECT id, username, nom, prenom, role FROM users WHERE id = :user_id";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':user_id', $_SESSION['user_id']);
+    $stmt->execute();
+    
+    if ($stmt->rowCount() > 0) {
+        $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        // Si l'utilisateur n'existe pas, déconnecter
+        session_destroy();
+        header('Location: ../auth/login.php');
+        exit;
+    }
+} catch (PDOException $e) {
+    // Log l'erreur et rediriger vers une page d'erreur
+    error_log('Erreur de récupération des données utilisateur: ' . $e->getMessage());
+    header('Location: ../error.php');
+    exit;
+}
 
 $database = new Database();
 $db = $database->getConnection();
@@ -230,9 +249,18 @@ include $root_path . '/includes/header.php';
 
     <!-- Main Content -->
     <div class="flex-1 overflow-auto p-6">
+    <div class="bg-white shadow-sm">
+            <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-semibold text-gray-800">Gestion des Factures</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <span class="text-gray-700"><?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?></span>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-gray-800">Gestion des Factures</h1>
                 <a href="../orders/create.php" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />

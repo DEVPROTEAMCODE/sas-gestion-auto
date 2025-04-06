@@ -28,7 +28,7 @@ $currentUser = [
 
 // Vérifier si un ID de véhicule est fourni
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header('Location: index.php');
+    header('Location: view.php');
     exit;
 }
 
@@ -45,12 +45,12 @@ $vehicule = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Vérifier si le véhicule existe
 if (!$vehicule) {
-    header('Location: index.php');
+    header('Location: view.php');
     exit;
 }
 
 // Récupérer la liste des clients pour le formulaire
-$query = "SELECT  cl.id as client_id,
+$query = "SELECT cl.id as client_id,
                  CASE 
                     WHEN cl.type_client_id = 1 THEN CONCAT(cl.prenom, ' ', cl.nom)
                     ELSE CONCAT(cl.raison_sociale)
@@ -65,59 +65,95 @@ $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Vérification et nettoyage des données
-    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-    $immatriculation = trim($_POST['immatriculation']);
-    $client_id = intval($_POST['client_id']);
-    $marque = trim($_POST['marque']);
-    $modele = trim($_POST['modele']);
-    $annee = intval($_POST['annee']);
-    $kilometrage = intval($_POST['kilometrage']);
-    $couleur = trim($_POST['couleur']);
-    $carburant = trim($_POST['carburant']);
-    $puissance = intval($_POST['puissance']);
-    $date_mise_circulation = !empty($_POST['date_mise_circulation']) ? date('Y-m-d', strtotime($_POST['date_mise_circulation'])) : null;
-    $date_derniere_revision = !empty($_POST['date_derniere_revision']) ? date('Y-m-d', strtotime($_POST['date_derniere_revision'])) : null;
-    $date_prochain_ct = !empty($_POST['date_prochain_ct']) ? date('Y-m-d', strtotime($_POST['date_prochain_ct'])) : null;
-    $statut = trim($_POST['statut']);
-    $notes = trim($_POST['notes']);
+    // Validation des données
+    if (empty($_POST['immatriculation'])) {
+        $errors['immatriculation'] = 'L\'immatriculation est requise';
+    }
+    
+    if (empty($_POST['client_id'])) {
+        $errors['client_id'] = 'Le client est requis';
+    }
+    
+    if (empty($_POST['marque'])) {
+        $errors['marque'] = 'La marque est requise';
+    }
+    
+    if (empty($_POST['modele'])) {
+        $errors['modele'] = 'Le modèle est requis';
+    }
+    
+    if (empty($_POST['annee'])) {
+        $errors['annee'] = 'L\'année est requise';
+    }
+    
+    if (empty($_POST['kilometrage'])) {
+        $errors['kilometrage'] = 'Le kilométrage est requis';
+    }
 
-    if ($id > 0) {
+    // Si aucune erreur, mettre à jour le véhicule
+    if (empty($errors)) {
         try {
-            $query = "UPDATE vehicules SET immatriculation = :immatriculation, client_id = :client_id, marque = :marque, 
-                      modele = :modele, annee = :annee, kilometrage = :kilometrage, couleur = :couleur, carburant = :carburant, 
-                      puissance = :puissance, date_mise_circulation = :date_mise_circulation, date_derniere_revision = :date_derniere_revision, 
-                      date_prochain_ct = :date_prochain_ct, statut = :statut, notes = :notes WHERE id = :id";
+            // Préparer la requête de mise à jour
+            $query = "UPDATE vehicules SET 
+                      immatriculation = :immatriculation, 
+                      client_id = :client_id, 
+                      marque = :marque, 
+                      modele = :modele, 
+                      annee = :annee, 
+                      kilometrage = :kilometrage, 
+                      couleur = :couleur, 
+                      carburant = :carburant, 
+                      puissance = :puissance, 
+                      date_mise_circulation = :date_mise_circulation, 
+                      date_derniere_revision = :date_derniere_revision, 
+                      date_prochain_ct = :date_prochain_ct, 
+                      statut = :statut, 
+                      notes = :notes
+                      WHERE id = :id";
             
             $stmt = $db->prepare($query);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            $stmt->bindParam(':immatriculation', $immatriculation);
-            $stmt->bindParam(':client_id', $client_id, PDO::PARAM_INT);
-            $stmt->bindParam(':marque', $marque);
-            $stmt->bindParam(':modele', $modele);
-            $stmt->bindParam(':annee', $annee, PDO::PARAM_INT);
-            $stmt->bindParam(':kilometrage', $kilometrage, PDO::PARAM_INT);
-            $stmt->bindParam(':couleur', $couleur);
-            $stmt->bindParam(':carburant', $carburant);
-            $stmt->bindParam(':puissance', $puissance, PDO::PARAM_INT);
-            $stmt->bindParam(':date_mise_circulation', $date_mise_circulation);
-            $stmt->bindParam(':date_derniere_revision', $date_derniere_revision);
-            $stmt->bindParam(':date_prochain_ct', $date_prochain_ct);
-            $stmt->bindParam(':statut', $statut);
-            $stmt->bindParam(':notes', $notes);
             
+            // Binder les paramètres
+            $stmt->bindParam(':id', $vehicule_id);
+            $stmt->bindParam(':immatriculation', $_POST['immatriculation']);
+            $stmt->bindParam(':client_id', $_POST['client_id']);
+            $stmt->bindParam(':marque', $_POST['marque']);
+            $stmt->bindParam(':modele', $_POST['modele']);
+            $stmt->bindParam(':annee', $_POST['annee']);
+            $stmt->bindParam(':kilometrage', $_POST['kilometrage']);
+            $stmt->bindParam(':couleur', $_POST['couleur']);
+            $stmt->bindParam(':carburant', $_POST['carburant']);
+            $stmt->bindParam(':puissance', $_POST['puissance']);
+            
+            // Traitement des dates
+            $date_mise_circulation = !empty($_POST['date_mise_circulation']) ? date('Y-m-d', strtotime($_POST['date_mise_circulation'])) : null;
+            $stmt->bindParam(':date_mise_circulation', $date_mise_circulation);
+            
+            $date_derniere_revision = !empty($_POST['date_derniere_revision']) ? date('Y-m-d', strtotime($_POST['date_derniere_revision'])) : null;
+            $stmt->bindParam(':date_derniere_revision', $date_derniere_revision);
+            
+            $date_prochain_ct = !empty($_POST['date_prochain_ct']) ? date('Y-m-d', strtotime($_POST['date_prochain_ct'])) : null;
+            $stmt->bindParam(':date_prochain_ct', $date_prochain_ct);
+            
+            $stmt->bindParam(':statut', $_POST['statut']);
+            $stmt->bindParam(':notes', $_POST['notes']);
+            
+           
+            
+            // Exécuter la requête
             if ($stmt->execute()) {
                 $success = true;
-                header("Location: view.php?id=" . $id);
+                
+                // Redirection vers la page de détail
+                header('Location: view.php?id=' . $vehicule_id . '&updated=true');
                 exit;
             } else {
-                $errors['database'] = "Erreur lors de la mise à jour du véhicule.";
+                $errors['database'] = 'Erreur lors de la mise à jour du véhicule';
             }
         } catch (PDOException $e) {
-            $errors['database'] = "Erreur: " . $e->getMessage();
+            // Gérer les erreurs de base de données
+            $errors['database'] = 'Erreur lors de la mise à jour du véhicule: ' . $e->getMessage();
         }
-    } else {
-        $errors['id'] = "ID de véhicule invalide.";
     }
 }
 
@@ -153,18 +189,24 @@ include $root_path . '/includes/header.php';
                     </li>
                     <li class="mx-2">/</li>
                     <li>
-                        <a href="index.php" class="hover:text-indigo-600">Véhicules</a>
+                        <a href="view.php" class="hover:text-indigo-600">Véhicules</a>
+                    </li>
+                    <li class="mx-2">/</li>
+                    <li>
+                        <a href="view.php?id=<?php echo $vehicule_id; ?>" class="hover:text-indigo-600">
+                            <?php echo htmlspecialchars($vehicule['immatriculation']); ?>
+                        </a>
                     </li>
                     <li class="mx-2">/</li>
                     <li class="text-gray-800 font-medium">Modifier</li>
                 </ol>
             </nav>
             
-            <!-- Error Message -->
-            <?php if (isset($_GET['error']) && $_GET['error'] === 'true'): ?>
+            <!-- Error Messages -->
+            <?php if (!empty($errors['database'])): ?>
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded" role="alert">
                     <p class="font-bold">Erreur</p>
-                    <p>Une erreur s'est produite lors de la mise à jour du véhicule.</p>
+                    <p><?php echo $errors['database']; ?></p>
                 </div>
             <?php endif; ?>
             
@@ -173,9 +215,7 @@ include $root_path . '/includes/header.php';
                 <div class="p-6">
                     <h2 class="text-lg font-semibold text-gray-800 mb-6">Informations du véhicule</h2>
                     
-                    <form action="edit.php" method="POST" data-validate="true" id="edit-vehicle-form">
-                        <input type="hidden" name="id" value="<?php echo $vehicule_id; ?>">
-                        
+                    <form action="edit.php?id=<?php echo $vehicule_id; ?>" method="POST" data-validate="true" id="edit-vehicle-form">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Immatriculation -->
                             <div>
@@ -347,7 +387,7 @@ include $root_path . '/includes/header.php';
                         
                         <!-- Form Actions -->
                         <div class="mt-8 flex justify-end space-x-3">
-                            <a href="index.php" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            <a href="view.php<?php echo isset($vehicule_id) ? '?id=' . $vehicule_id : ''; ?>" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
                                 Annuler
                             </a>
                             <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
@@ -355,7 +395,8 @@ include $root_path . '/includes/header.php';
                             </button>
                         </div>
                     </form>
-                </div>
+                
+                    </div>
             </div>
             
             <!-- Tips Card -->
@@ -369,7 +410,7 @@ include $root_path . '/includes/header.php';
                     <div>
                         <h3 class="text-sm font-medium text-blue-800">Conseils pour la modification de véhicules</h3>
                         <ul class="mt-2 text-sm text-blue-700 list-disc list-inside">
-                            <li>Assurez-vous que toutes les informations sont correctes avant d'enregistrer</li>
+                            <li>Vérifiez que toutes les informations sont correctes avant d'enregistrer</li>
                             <li>La mise à jour du kilométrage permet de suivre l'évolution de l'usure du véhicule</li>
                             <li>Les dates de révision et de contrôle technique sont importantes pour la planification des entretiens</li>
                         </ul>
@@ -377,32 +418,14 @@ include $root_path . '/includes/header.php';
                 </div>
             </div>
             
-            <!-- History Card -->
-            <div class="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
-                <div class="p-6">
-                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Historique des modifications</h2>
-                    
-                    <div class="border-t border-gray-200 pt-4">
-                        <div class="flex items-center text-sm text-gray-600">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <span>Créé le: <?php echo !empty($vehicule['date_creation']) ? date('d/m/Y', strtotime($vehicule['date_creation'])) : 'Non disponible'; ?></span>
-                        </div>
-                        
-                        <?php if (!empty($vehicule['date_modification'])): ?>
-                            <div class="flex items-center text-sm text-gray-600 mt-2">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                                <span>Dernière modification le: <?php echo date('d/m/Y', strtotime($vehicule['date_modification'])); ?></span>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
+           
+            
         </div>
     </div>
 </div>
+
+
+
+
 
 <?php include $root_path . '/includes/footer.php'; ?>
