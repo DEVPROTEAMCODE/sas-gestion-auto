@@ -13,23 +13,34 @@ if (file_exists($root_path . '/config/database.php')) {
 if (file_exists($root_path . '/includes/functions.php')) {
     require_once $root_path . '/includes/functions.php';
 }
-
-// Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
-if (!isset($_SESSION['user_id'])) {
-    //header('Location: login.php');
-    //exit;
-    $_SESSION['user_id'] = 1; // Utilisateur temporaire pour le développement
-}
-
-// Récupérer les informations de l'utilisateur actuel
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
-
 // Initialize database connection
 $database = new Database();
 $db = $database->getConnection();
+// Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit;
+}
+
+// Récupérer les informations de l'utilisateur actuel
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
+
+
 
 // Récupérer la liste des clients
 $clients = [];

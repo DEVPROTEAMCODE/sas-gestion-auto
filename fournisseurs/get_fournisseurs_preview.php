@@ -12,11 +12,9 @@ if (file_exists($root_path . '/config/database.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Utilisateur non connecté']);
+    header("Location: ../login.php");
     exit;
 }
-
 // Filtres
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $status = isset($_GET['status']) ? $_GET['status'] : '';

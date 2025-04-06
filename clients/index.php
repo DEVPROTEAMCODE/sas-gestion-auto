@@ -25,7 +25,8 @@ if (!$db) {
 
 // Vérifier si l'utilisateur est connecté, sinon créer un utilisateur fictif pour le développement
 if (!isset($_SESSION['user_id'])) {
-    $_SESSION['user_id'] = 1;
+    header("Location: ../login.php");
+    exit;
 }
 
 // Récupérer les informations de l'utilisateur connecté

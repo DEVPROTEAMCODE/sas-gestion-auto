@@ -13,23 +13,36 @@ if (file_exists($root_path . '/config/database.php')) {
 if (file_exists($root_path . '/includes/functions.php')) {
     require_once $root_path . '/includes/functions.php';
 }
+// Connexion à la base de données
+$database = new Database();
+$db = $database->getConnection();
 
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
+    header("Location: ../login.php");
+    exit;
 }
 
 // Récupérer les informations de l'utilisateur actuel
 // Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
 
-// Connexion à la base de données
-$database = new Database();
-$db = $database->getConnection();
+
 
 // Déterminer le type d'utilisateur actif (par défaut: technicien)
 $user_type = isset($_GET['type']) ? $_GET['type'] : 'technicien';

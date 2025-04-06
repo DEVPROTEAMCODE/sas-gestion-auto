@@ -16,8 +16,8 @@ if (file_exists($root_path . '/includes/functions.php')) {
 
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
+    header("Location: ../login.php");
+    exit;
 }
 
 // Vérifier si le formulaire a été soumis

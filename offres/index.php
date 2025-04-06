@@ -14,34 +14,39 @@ if (file_exists($root_path . '/config/database.php')) {
 if (file_exists($root_path . '/includes/functions.php')) {
     require_once $root_path . '/includes/functions.php';
 }
-
-// Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
-if (!isset($_SESSION['user_id'])) {
-    //header('Location: login.php');
-    //exit;
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
-}
-
 // Récupérer les informations de l'utilisateur actuel
-// Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
-
-// Inclure l'en-tête
-include '../includes/header.php';
-
+$database = new Database();
+$db = $database->getConnection();
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../auth/login.php');
+    header("Location: ../login.php");
     exit;
 }
 
 // Récupérer les informations de l'utilisateur actuel
-$database = new Database();
-$db = $database->getConnection();
+// Utilisateur temporaire pour éviter l'erreur
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
+
+// Inclure l'en-tête
+include '../includes/header.php';
+
+
+
 
 
 
@@ -179,11 +184,11 @@ $totalPages = ceil($totalOffres / $limit);
         <div class="bg-white shadow-sm">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-semibold text-gray-800">Gestion des Offres</h1>
-               <!--  <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4">
                     <div class="relative">
-                        <span class="text-gray-700"><?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?></span>
+                    <span class="text-gray-700"><?php echo isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : 'Utilisateur'; ?></span>
                     </div>
-                </div> -->
+                </div>
             </div>
         </div>
 

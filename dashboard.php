@@ -8,38 +8,48 @@ $root_path = __DIR__;
 // Inclure les fichiers de configuration et de fonctions
 if (file_exists($root_path . '/config/database.php')) {
     require_once $root_path . '/config/database.php';
-} else {
+} /* else {
     // Si le fichier n'existe pas, on crée un $currentUser par défaut
     // pour éviter les erreurs
     $currentUser = [
         'name' => 'Utilisateur',
         'role' => 'Admin'
     ];
-}
+} */
 
 if (file_exists($root_path . '/includes/functions.php')) {
     require_once $root_path . '/includes/functions.php';
 }
-
+$database = new Database();
+$db = $database->getConnection();
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    //header('Location: login.php');
-    //exit;
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
+    header("Location: login.php");
+    exit;
 }
 
 // Récupérer les informations de l'utilisateur actuel
 // Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
 
 // Inclure l'en-tête
 include 'includes/header.php';
-$database = new Database();
-$db = $database->getConnection();
+
 $count_query = "SELECT COUNT(*) as total FROM clients";
 $count_stmt = $db->prepare($count_query);
 $count_stmt->execute();
@@ -603,7 +613,7 @@ $monthly_revenue_data_json = json_encode($monthly_revenue_data);
                 </a>
 
                 <!-- Vehicles Management -->
-                <a href="vehicles/" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300 flex flex-col items-center justify-center text-center">
+                <a href="vehicles/view.php" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300 flex flex-col items-center justify-center text-center">
                     <div class="bg-green-100 p-4 rounded-full mb-4">
                         <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>

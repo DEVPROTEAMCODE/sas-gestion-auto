@@ -12,8 +12,7 @@ if (file_exists($root_path . '/config/database.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Accès non autorisé']);
+    header("Location: ../login.php");
     exit;
 }
 

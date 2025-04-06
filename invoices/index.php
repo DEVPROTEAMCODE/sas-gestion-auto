@@ -16,37 +16,29 @@ if (file_exists($root_path . '/includes/functions.php')) {
 
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
-}
-
-// Utilisateur temporaire pour éviter l'erreur
-try {
-    $database = new Database();
-    $db = $database->getConnection();
-    
-    $query = "SELECT id, username, nom, prenom, role FROM users WHERE id = :user_id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':user_id', $_SESSION['user_id']);
-    $stmt->execute();
-    
-    if ($stmt->rowCount() > 0) {
-        $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-    } else {
-        // Si l'utilisateur n'existe pas, déconnecter
-        session_destroy();
-        header('Location: ../auth/login.php');
-        exit;
-    }
-} catch (PDOException $e) {
-    // Log l'erreur et rediriger vers une page d'erreur
-    error_log('Erreur de récupération des données utilisateur: ' . $e->getMessage());
-    header('Location: ../error.php');
+    header("Location: ../login.php");
     exit;
 }
-
 $database = new Database();
 $db = $database->getConnection();
+// Utilisateur temporaire pour éviter l'erreur
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
+
 
 // Traitement des actions
 $message = '';
@@ -254,7 +246,7 @@ include $root_path . '/includes/header.php';
                 <h1 class="text-2xl font-semibold text-gray-800">Gestion des Factures</h1>
                 <div class="flex items-center space-x-4">
                     <div class="relative">
-                        <span class="text-gray-700"><?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?></span>
+                    <span class="text-gray-700"><?php echo isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : 'Utilisateur'; ?></span>
                     </div>
                 </div>
             </div>

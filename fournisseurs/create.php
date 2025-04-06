@@ -16,9 +16,7 @@ if (file_exists($root_path . '/includes/functions.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    // Redirection vers la page de connexion ou message d'erreur
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Utilisateur non connecté']);
+    header("Location: ../login.php");
     exit;
 }
 

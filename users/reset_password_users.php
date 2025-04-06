@@ -4,6 +4,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit;
+}
 // Activer l'affichage des erreurs pour le développement uniquement
 // À commenter en production
 ini_set('display_errors', 1);

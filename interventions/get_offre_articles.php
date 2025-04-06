@@ -2,6 +2,11 @@
 // Démarrer la session
 session_start();
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit;
+}
+
 // Chemin racine de l'application
 $root_path = dirname(__DIR__);
 

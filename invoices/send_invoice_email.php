@@ -63,9 +63,7 @@ use PHPMailer\PHPMailer\SMTP;
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    logMessage("Tentative d'accès non autorisé - utilisateur non connecté", 'SECURITY');
-    $_SESSION['error'] = "Vous devez être connecté pour accéder à cette fonctionnalité.";
-    header('Location: login.php');
+    header("Location: ../login.php");
     exit;
 }
 

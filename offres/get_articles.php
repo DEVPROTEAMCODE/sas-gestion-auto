@@ -4,8 +4,7 @@ session_start();
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Utilisateur non connecté']);
+    header("Location: ../login.php");
     exit;
 }
 

@@ -26,8 +26,8 @@ function log_debug($message) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    // Pour le développement, créer un utilisateur factice
-    $_SESSION['user_id'] = 1;
+    header("Location: ../login.php");
+    exit;
 }
 
 // Vérifier si la requête est de type POST

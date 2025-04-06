@@ -16,7 +16,7 @@ if (file_exists($root_path . '/includes/functions.php')) {
 
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
+    header("Location: ../login.php");
     exit;
 }
 

@@ -1,6 +1,11 @@
 <?php
 $root_path = dirname(__DIR__);
 
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit;
+}
 // Inclure les fichiers de configuration et de fonctions
 
 if (file_exists($root_path . '/config/database.php')) {

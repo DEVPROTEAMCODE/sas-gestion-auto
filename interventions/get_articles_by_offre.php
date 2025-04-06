@@ -3,6 +3,11 @@
 session_start();
 require_once '../config/database.php';
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../login.php");
+    exit;
+}
+
 $offre_id = isset($_GET['offre_id']) ? (int)$_GET['offre_id'] : 0;
 
 $database = new Database();

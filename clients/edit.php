@@ -16,10 +16,9 @@ if (file_exists($root_path . '/includes/functions.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header("Location: ../login.php");
     exit;
 }
-
 // Utilisateur temporaire pour éviter l'erreur (comme dans la page create.php)
 $currentUser = [
     'name' => 'Utilisateur Test',

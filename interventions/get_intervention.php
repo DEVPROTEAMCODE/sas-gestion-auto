@@ -12,10 +12,9 @@ if (file_exists($root_path . '/config/database.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Vous devez être connecté pour effectuer cette action.']);
+    header("Location: ../login.php");
     exit;
 }
-
 // Vérifier si l'ID de l'intervention est fourni
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     echo json_encode(['success' => false, 'message' => 'ID d\'intervention non spécifié.']);

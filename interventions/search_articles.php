@@ -12,7 +12,7 @@ if (file_exists($root_path . '/config/database.php')) {
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Vous devez être connecté pour effectuer cette action.']);
+    header("Location: ../login.php");
     exit;
 }
 

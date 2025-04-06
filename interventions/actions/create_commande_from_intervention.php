@@ -11,9 +11,9 @@ require_once $root_path . '/includes/functions.php';
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-    redirectWithError('Vous devez être connecté pour effectuer cette action.', 'index.php');
+    header("Location: ../login.php");
+    exit;
 }
-
 // Vérifier si le formulaire a été soumis
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirectWithError('Accès non autorisé.', 'index.php');
