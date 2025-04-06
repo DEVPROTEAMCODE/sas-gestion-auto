@@ -13,7 +13,8 @@ if (file_exists($root_path . '/config/database.php')) {
 if (file_exists($root_path . '/includes/functions.php')) {
     require_once $root_path . '/includes/functions.php';
 }
-
+$database = new Database();
+$db = $database->getConnection();
 // Vérifier si l'utilisateur est connecté, sinon rediriger vers la page de connexion
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
@@ -21,10 +22,22 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
 
 // Vérifier si un ID de véhicule est fourni
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -35,8 +48,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $vehicule_id = $_GET['id'];
 
 // Récupérer les informations du véhicule
-$database = new Database();
-$db = $database->getConnection();
+
 $query = "SELECT * FROM vehicules WHERE id = :id";
 $stmt = $db->prepare($query);
 $stmt->bindParam(':id', $vehicule_id);
@@ -171,11 +183,11 @@ include $root_path . '/includes/header.php';
         <div class="bg-white shadow-sm">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-semibold text-gray-800">Modifier un véhicule</h1>
-                <div class="flex items-center space-x-4">
+               <!--  <div class="flex items-center space-x-4">
                     <div class="relative">
                         <span class="text-gray-700"><?php echo isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : 'Utilisateur'; ?></span>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
 

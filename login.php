@@ -29,7 +29,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         $database = new Database();
         $db = $database->getConnection();
         
-        // Requête pour récupérer l'utilisateur
+        // Variable pour suivre si l'utilisateur est trouvé
+        $user_found = false;
+        
+        // 1. Vérifier d'abord dans la table users
         $query = "SELECT id, username, password, nom, prenom, email, role, actif 
                   FROM users
                   WHERE username = ? 
@@ -39,6 +42,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
         $stmt->execute();
         
         if($stmt->rowCount() > 0) {
+            $user_found = true;
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             // Vérifier si l'utilisateur est actif
@@ -53,6 +57,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['user_email'] = $user['email'];
                 $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_type'] = 'admin'; // Marquer comme utilisateur administratif
                 
                 // Récupération des permissions de l'utilisateur
                 $perm_query = "SELECT p.nom 
@@ -89,8 +94,61 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             } else {
                 $error_message = "Mot de passe incorrect.";
             }
-        } else {
-            $error_message = "Nom d'utilisateur inconnu.";
+        }
+        
+        // 2. Si l'utilisateur n'est pas trouvé dans la table users ou si le mot de passe est incorrect, 
+        // chercher dans la table technicien
+        if (!$user_found || $error_message == "Mot de passe incorrect.") {
+            $query = "SELECT id, user_name, password, nom, prenom, email, specialite 
+                      FROM technicien
+                      WHERE user_name = ? 
+                      LIMIT 0,1";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(1, $username);
+            $stmt->execute();
+            
+            if($stmt->rowCount() > 0) {
+                $technicien = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Vérifier le mot de passe
+                if(password_verify($password, $technicien['password'])) {
+                    // Stockage des informations technicien dans la session
+                    $_SESSION['user_id'] = $technicien['id'];
+                    $_SESSION['user_name'] = $technicien['prenom'] . ' ' . $technicien['nom'];
+                    $_SESSION['username'] = $technicien['user_name'];
+                    $_SESSION['user_email'] = $technicien['email'];
+                    $_SESSION['user_role'] = 'technicien'; // Rôle fixe pour les techniciens
+                    $_SESSION['user_type'] = 'technicien'; // Marquer comme technicien
+                    $_SESSION['specialite'] = $technicien['specialite'];
+                    
+                    // Permissions de base pour les techniciens
+                    $_SESSION['user_permissions'] = [
+                        'lecture_interventions',
+                        'lecture_vehicules',
+                        'lecture_clients',
+                        'gestion_interventions' // Permission pour modifier leurs interventions
+                    ];
+                    
+                    // Journalisation de la connexion
+                    $log_query = "INSERT INTO logs (action, entite, entite_id, details, date_action, adresse_ip)
+                                 VALUES ('Connexion', 'technicien', ?, 'Connexion technicien réussie', NOW(), ?)";
+                    $log_stmt = $db->prepare($log_query);
+                    $log_stmt->bindParam(1, $technicien['id']);
+                    $log_stmt->bindParam(2, $_SERVER['REMOTE_ADDR']);
+                    $log_stmt->execute();
+                    
+                    // Redirection vers le tableau de bord
+                    header("Location: dashboard.php");
+                    exit;
+                } else {
+                    $error_message = "Mot de passe incorrect.";
+                }
+            } else {
+                // Si l'utilisateur n'est pas trouvé dans la table technicien non plus
+                if (!$user_found) {
+                    $error_message = "Nom d'utilisateur inconnu.";
+                }
+            }
         }
     }
 }

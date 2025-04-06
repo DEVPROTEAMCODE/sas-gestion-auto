@@ -173,6 +173,59 @@ try {
 // Calcul de la pagination
 $totalPages = ceil($totalOffres / $limit);
 ?>
+<style>
+    /* Animations pour les modales */
+    .bg-white {
+        transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+        transform: translateY(10px);
+        opacity: 0.95;
+    }
+    
+    .bg-white.transform-none {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    
+    /* Styles pour les conteneurs scrollables */
+    .overflow-y-auto {
+        scrollbar-width: thin;
+        scrollbar-color: #CBD5E0 #EDF2F7;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-track {
+        background: #EDF2F7;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+        background-color: #CBD5E0;
+        border-radius: 3px;
+    }
+    
+    /* Styles pour les en-têtes et pieds de page fixes */
+    .sticky {
+        position: sticky;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Assurer que les boutons restent visibles même en cas de défilement */
+    .sticky.bottom-0 {
+        box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Améliorer la lisibilité des formulaires */
+    label {
+        font-weight: 500;
+    }
+    
+    /* Améliorer l'apparence des champs obligatoires */
+    input:required, select:required, textarea:required {
+        border-left: 3px solid #4F46E5;
+    }
+</style>
 
 <div class="flex h-screen bg-gray-100">
     <!-- Sidebar -->
@@ -563,9 +616,9 @@ $totalPages = ceil($totalOffres / $limit);
 </div>
 
 <!-- Add Offre Modal -->
-<div id="addOffreModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
-        <div class="flex justify-between items-center p-4 border-b bg-blue-600 rounded-t-lg">
+<div id="addOffreModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex justify-center hidden">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 my-8 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b bg-blue-600 rounded-t-lg sticky top-0 z-10">
             <h3 class="text-xl font-semibold text-white">Ajouter une offre</h3>
             <button type="button" onclick="closeModal('addOffreModal')" class="text-white hover:text-gray-200">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -574,105 +627,109 @@ $totalPages = ceil($totalOffres / $limit);
             </button>
         </div>
 
-        <form id="addOffreForm" action="process_offre.php" method="POST" class="p-5" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="create">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Code*</label>
-                    <input type="text" id="code" name="code" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="OFF001" required>
-                </div>
-                <div>
-                    <label for="nom" class="block text-sm font-medium text-gray-700 mb-1">Nom*</label>
-                    <input type="text" id="nom" name="nom" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Soldes d'été" required>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="description" name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Description détaillée de l'offre"></textarea>
-                </div>
-                <div>
-                    <label for="categorie_id" class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                    <select id="categorie_id" name="categorie_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Toutes les catégories</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nom']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label for="priorite" class="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
-                    <input type="number" id="priorite" name="priorite" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="0" value="0">
-                    <p class="text-xs text-gray-500 mt-1">Plus la priorité est élevée, plus l'offre sera appliquée en premier</p>
-                </div>
-                <div>
-                    <label for="date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début*</label>
-                    <input type="date" id="date_debut" name="date_debut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div>
-                    <label for="date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
-                    <input type="date" id="date_fin" name="date_fin" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Laissez vide pour une offre sans date de fin</p>
-                </div>
-                <div>
-                    <label for="type_remise" class="block text-sm font-medium text-gray-700 mb-1">Type de remise*</label>
-                    <select id="type_remise" name="type_remise" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                        <option value="pourcentage">Pourcentage (%)</option>
-                        <option value="montant_fixe">Montant fixe (DH)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="valeur_remise" class="block text-sm font-medium text-gray-700 mb-1">Valeur de la remise*</label>
-                    <input type="number" id="valeur_remise" name="valeur_remise" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="10.00" required>
-                </div>
-                <div>
-                    <label for="image" class="block text-sm font-medium text-gray-700 mb-1">Image</label>
-                    <input type="file" id="image" name="image" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" accept="image/*">
-                </div>
-                <div>
-                    <label for="actif" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                    <select id="actif" name="actif" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="1">Actif</option>
-                        <option value="0">Inactif</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="conditions" class="block text-sm font-medium text-gray-700 mb-1">Conditions</label>
-                    <textarea id="conditions" name="conditions" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Conditions particulières de l'offre"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-5 pt-5 border-t border-gray-200">
-                <h4 class="text-lg font-semibold text-gray-800 mb-3">Articles concernés</h4>
-                <p class="text-sm text-gray-600 mb-3">Sélectionnez les articles spécifiques pour cette offre ou laissez vide pour appliquer à tous les articles de la catégorie.</p>
+        <div class="overflow-y-auto p-5 flex-grow">
+            <form id="addOffreForm" action="process_offre.php" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="create">
                 
-                <div class="mb-4">
-                    <div class="flex items-center mb-2">
-                        <input type="checkbox" id="select_all_articles" class="mr-2">
-                        <label for="select_all_articles" class="text-sm font-medium text-gray-700">Sélectionner tous les articles</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Code*</label>
+                        <input type="text" id="code" name="code" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="OFF001" required>
                     </div>
-                    
-                    <div id="articles_container" class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        <div class="text-center text-gray-500 py-2">Chargement des articles...</div>
+                    <div>
+                        <label for="nom" class="block text-sm font-medium text-gray-700 mb-1">Nom*</label>
+                        <input type="text" id="nom" name="nom" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Soldes d'été" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="description" name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Description détaillée de l'offre"></textarea>
+                    </div>
+                    <div>
+                        <label for="categorie_id" class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                        <select id="categorie_id" name="categorie_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Toutes les catégories</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nom']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="priorite" class="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
+                        <input type="number" id="priorite" name="priorite" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="0" value="0">
+                        <p class="text-xs text-gray-500 mt-1">Plus la priorité est élevée, plus l'offre sera appliquée en premier</p>
+                    </div>
+                    <div>
+                        <label for="date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début*</label>
+                        <input type="date" id="date_debut" name="date_debut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                        <input type="date" id="date_fin" name="date_fin" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Laissez vide pour une offre sans date de fin</p>
+                    </div>
+                    <div>
+                        <label for="type_remise" class="block text-sm font-medium text-gray-700 mb-1">Type de remise*</label>
+                        <select id="type_remise" name="type_remise" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="pourcentage">Pourcentage (%)</option>
+                            <option value="montant_fixe">Montant fixe (DH)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="valeur_remise" class="block text-sm font-medium text-gray-700 mb-1">Valeur de la remise*</label>
+                        <input type="number" id="valeur_remise" name="valeur_remise" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="10.00" required>
+                    </div>
+                    <div>
+                        <label for="image" class="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                        <input type="file" id="image" name="image" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" accept="image/*">
+                    </div>
+                    <div>
+                        <label for="actif" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                        <select id="actif" name="actif" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1">Actif</option>
+                            <option value="0">Inactif</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="conditions" class="block text-sm font-medium text-gray-700 mb-1">Conditions</label>
+                        <textarea id="conditions" name="conditions" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Conditions particulières de l'offre"></textarea>
                     </div>
                 </div>
-            </div>
 
-            <div class="mt-5 pt-5 border-t border-gray-200 flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('addOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Annuler
-                </button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                    Enregistrer
-                </button>
-            </div>
-        </form>
+                <div class="mt-5 pt-5 border-t border-gray-200">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">Articles concernés</h4>
+                    <p class="text-sm text-gray-600 mb-3">Sélectionnez les articles spécifiques pour cette offre ou laissez vide pour appliquer à tous les articles de la catégorie.</p>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="select_all_articles" class="mr-2">
+                            <label for="select_all_articles" class="text-sm font-medium text-gray-700">Sélectionner tous les articles</label>
+                        </div>
+                        
+                        <div id="articles_container" class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
+                            <div class="text-center text-gray-500 py-2">Chargement des articles...</div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-10 flex justify-end space-x-3">
+            <button type="button" onclick="closeModal('addOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Annuler
+            </button>
+            <button type="submit" form="addOffreForm" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Enregistrer
+            </button>
+        </div>
     </div>
 </div>
 
+
 <!-- View Offre Modal -->
-<div id="viewOffreModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
-        <div class="flex justify-between items-center p-6 border-b">
+<!-- View Offre Modal -->
+<div id="viewOffreModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex justify-center hidden">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 my-8 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b sticky top-0 z-10 bg-white rounded-t-lg">
             <h3 class="text-xl font-semibold text-gray-900">Détails de l'offre</h3>
             <button type="button" onclick="closeModal('viewOffreModal')" class="text-gray-400 hover:text-gray-500">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -681,7 +738,7 @@ $totalPages = ceil($totalOffres / $limit);
             </button>
         </div>
 
-        <div class="p-6">
+        <div class="p-6 overflow-y-auto flex-grow">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <h4 class="text-lg font-semibold text-blue-600 mb-4">Informations générales</h4>
@@ -746,27 +803,29 @@ $totalPages = ceil($totalOffres / $limit);
                     </div>
                 </div>
             </div>
-
-            <div class="mt-6 pt-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('viewOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Fermer
-                </button>
-                <button type="button" id="edit_offre_button" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    Modifier
-                </button>
-                <button type="button" id="duplicate_offre_button" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                    Dupliquer
-                </button>
-            </div>
             <input type="hidden" id="view_id" value="">
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-10 flex justify-end space-x-3">
+            <button type="button" onclick="closeModal('viewOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Fermer
+            </button>
+            <button type="button" id="edit_offre_button" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                Modifier
+            </button>
+            <button type="button" id="duplicate_offre_button" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                Dupliquer
+            </button>
         </div>
     </div>
 </div>
 
+
 <!-- Edit Offre Modal -->
-<div id="editOffreModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
-        <div class="flex justify-between items-center p-6 border-b">
+<!-- Edit Offre Modal -->
+<div id="editOffreModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex justify-center hidden">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 my-8 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b sticky top-0 z-10 bg-white rounded-t-lg">
             <h3 class="text-xl font-semibold text-gray-900">Modifier l'offre</h3>
             <button type="button" onclick="closeModal('editOffreModal')" class="text-gray-400 hover:text-gray-500">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -775,118 +834,122 @@ $totalPages = ceil($totalOffres / $limit);
             </button>
         </div>
 
-        <form id="editOffreForm" action="process_offre.php" method="POST" class="p-6" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="update">
-            <input type="hidden" id="edit_id" name="id" value="">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label for="edit_code" class="block text-sm font-medium text-gray-700 mb-1">Code*</label>
-                    <input type="text" id="edit_code" name="code" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div>
-                    <label for="edit_nom" class="block text-sm font-medium text-gray-700 mb-1">Nom*</label>
-                    <input type="text" id="edit_nom" name="nom" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="edit_description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="edit_description" name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-                </div>
-                <div>
-                    <label for="edit_categorie_id" class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                    <select id="edit_categorie_id" name="categorie_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Toutes les catégories</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nom']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label for="edit_priorite" class="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
-                    <input type="number" id="edit_priorite" name="priorite" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Plus la priorité est élevée, plus l'offre sera appliquée en premier</p>
-                </div>
-                <div>
-                    <label for="edit_date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début*</label>
-                    <input type="date" id="edit_date_debut" name="date_debut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div>
-                    <label for="edit_date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
-                    <input type="date" id="edit_date_fin" name="date_fin" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Laissez vide pour une offre sans date de fin</p>
-                </div>
-                <div>
-                    <label for="edit_type_remise" class="block text-sm font-medium text-gray-700 mb-1">Type de remise*</label>
-                    <select id="edit_type_remise" name="type_remise" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                        <option value="pourcentage">Pourcentage (%)</option>
-                        <option value="montant_fixe">Montant fixe (DH)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="edit_valeur_remise" class="block text-sm font-medium text-gray-700 mb-1">Valeur de la remise*</label>
-                    <input type="number" id="edit_valeur_remise" name="valeur_remise" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Image actuelle</label>
-                    <div class="flex items-center">
-                        <div id="edit_current_image_container" class="h-16 w-16 bg-gray-100 rounded-md flex items-center justify-center mr-3">
-                            <img id="edit_current_image" src="" alt="Image actuelle" class="max-h-full max-w-full hidden">
-                            <span id="edit_no_current_image" class="text-xs text-gray-500">Aucune image</span>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="edit_delete_image" name="delete_image" class="mr-2">
-                            <label for="edit_delete_image" class="text-sm text-gray-700">Supprimer l'image</label>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <label for="edit_image" class="block text-sm font-medium text-gray-700 mb-1">Nouvelle image</label>
-                    <input type="file" id="edit_image" name="image" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" accept="image/*">
-                </div>
-                <div>
-                    <label for="edit_actif" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                    <select id="edit_actif" name="actif" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="1">Actif</option>
-                        <option value="0">Inactif</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label for="edit_conditions" class="block text-sm font-medium text-gray-700 mb-1">Conditions</label>
-                    <textarea id="edit_conditions" name="conditions" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-5 pt-5 border-t border-gray-200">
-                <h4 class="text-lg font-semibold text-gray-800 mb-3">Articles concernés</h4>
-                <p class="text-sm text-gray-600 mb-3">Sélectionnez les articles spécifiques pour cette offre ou laissez vide pour appliquer à tous les articles de la catégorie.</p>
+        <div class="p-6 overflow-y-auto flex-grow">
+            <form id="editOffreForm" action="process_offre.php" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" id="edit_id" name="id" value="">
                 
-                <div class="mb-4">
-                    <div class="flex items-center mb-2">
-                        <input type="checkbox" id="edit_select_all_articles" class="mr-2">
-                        <label for="edit_select_all_articles" class="text-sm font-medium text-gray-700">Sélectionner tous les articles</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="edit_code" class="block text-sm font-medium text-gray-700 mb-1">Code*</label>
+                        <input type="text" id="edit_code" name="code" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
-                    
-                    <div id="edit_articles_container" class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        <div class="text-center text-gray-500 py-2">Chargement des articles...</div>
+                    <div>
+                        <label for="edit_nom" class="block text-sm font-medium text-gray-700 mb-1">Nom*</label>
+                        <input type="text" id="edit_nom" name="nom" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="edit_description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="edit_description" name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="edit_categorie_id" class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                        <select id="edit_categorie_id" name="categorie_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Toutes les catégories</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nom']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="edit_priorite" class="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
+                        <input type="number" id="edit_priorite" name="priorite" min="0" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Plus la priorité est élevée, plus l'offre sera appliquée en premier</p>
+                    </div>
+                    <div>
+                        <label for="edit_date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début*</label>
+                        <input type="date" id="edit_date_debut" name="date_debut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="edit_date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                        <input type="date" id="edit_date_fin" name="date_fin" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Laissez vide pour une offre sans date de fin</p>
+                    </div>
+                    <div>
+                        <label for="edit_type_remise" class="block text-sm font-medium text-gray-700 mb-1">Type de remise*</label>
+                        <select id="edit_type_remise" name="type_remise" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="pourcentage">Pourcentage (%)</option>
+                            <option value="montant_fixe">Montant fixe (DH)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="edit_valeur_remise" class="block text-sm font-medium text-gray-700 mb-1">Valeur de la remise*</label>
+                        <input type="number" id="edit_valeur_remise" name="valeur_remise" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Image actuelle</label>
+                        <div class="flex items-center">
+                            <div id="edit_current_image_container" class="h-16 w-16 bg-gray-100 rounded-md flex items-center justify-center mr-3">
+                                <img id="edit_current_image" src="" alt="Image actuelle" class="max-h-full max-w-full hidden">
+                                <span id="edit_no_current_image" class="text-xs text-gray-500">Aucune image</span>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="edit_delete_image" name="delete_image" class="mr-2">
+                                <label for="edit_delete_image" class="text-sm text-gray-700">Supprimer l'image</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="edit_image" class="block text-sm font-medium text-gray-700 mb-1">Nouvelle image</label>
+                        <input type="file" id="edit_image" name="image" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" accept="image/*">
+                    </div>
+                    <div>
+                        <label for="edit_actif" class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                        <select id="edit_actif" name="actif" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="1">Actif</option>
+                            <option value="0">Inactif</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="edit_conditions" class="block text-sm font-medium text-gray-700 mb-1">Conditions</label>
+                        <textarea id="edit_conditions" name="conditions" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
                 </div>
-            </div>
 
-            <div class="mt-5 pt-5 border-t border-gray-200 flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('editOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Annuler
-                </button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                    Enregistrer les modifications
-                </button>
-            </div>
-        </form>
+                <div class="mt-5 pt-5 border-t border-gray-200">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">Articles concernés</h4>
+                    <p class="text-sm text-gray-600 mb-3">Sélectionnez les articles spécifiques pour cette offre ou laissez vide pour appliquer à tous les articles de la catégorie.</p>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="edit_select_all_articles" class="mr-2">
+                            <label for="edit_select_all_articles" class="text-sm font-medium text-gray-700">Sélectionner tous les articles</label>
+                        </div>
+                        
+                        <div id="edit_articles_container" class="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
+                            <div class="text-center text-gray-500 py-2">Chargement des articles...</div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-10 flex justify-end space-x-3">
+            <button type="button" onclick="closeModal('editOffreModal')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Annuler
+            </button>
+            <button type="submit" form="editOffreForm" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Enregistrer les modifications
+            </button>
+        </div>
     </div>
 </div>
 
+
 <!-- Delete Offre Confirmation Modal -->
-<div id="deleteOffreModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+<!-- Delete Offre Confirmation Modal -->
+<div id="deleteOffreModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 my-8">
         <div class="p-6">
             <div class="flex items-center justify-center mb-4">
                 <div class="bg-red-100 rounded-full p-3">
@@ -912,6 +975,8 @@ $totalPages = ceil($totalOffres / $limit);
         </div>
     </div>
 </div>
+
+
 
 <script>
     // Function to open modal

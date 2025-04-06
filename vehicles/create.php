@@ -20,16 +20,28 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
     exit;
 }
-
-// Utilisateur temporaire pour éviter l'erreur
-$currentUser = [
-    'name' => 'Utilisateur Test',
-    'role' => 'Administrateur'
-];
-
-// Récupérer la liste des clients pour le formulaire
 $database = new Database();
 $db = $database->getConnection();
+// Utilisateur temporaire pour éviter l'erreur
+$currentUser = [];
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT nom, prenom, role FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bindParam(1, $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user) {
+            $currentUser = [
+                'name' => $user['prenom'] . ' ' . $user['nom'],
+                'role' => $user['role']
+            ];
+        }
+    }
+}
+
+// Récupérer la liste des clients pour le formulaire
+
 $query = "SELECT  cl.id as client_id,
                      CASE 
                         WHEN cl.type_client_id = 1 THEN CONCAT(cl.prenom, ' ', cl.nom)
@@ -142,11 +154,11 @@ include $root_path . '/includes/header.php';
         <div class="bg-white shadow-sm">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-semibold text-gray-800">Ajouter un véhicule</h1>
-                <div class="flex items-center space-x-4">
+                <!-- <div class="flex items-center space-x-4">
                     <div class="relative">
                         <span class="text-gray-700"><?php echo isset($currentUser['name']) ? htmlspecialchars($currentUser['name']) : 'Utilisateur'; ?></span>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
 
