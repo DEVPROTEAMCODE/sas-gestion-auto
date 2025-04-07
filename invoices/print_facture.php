@@ -60,14 +60,6 @@ $stmt_details->bindParam(':id', $facture_id);
 $stmt_details->execute();
 $facture_details = $stmt_details->fetchAll(PDO::FETCH_ASSOC);
 
-// Calculer le nombre total d'articles
-$nombre_articles = 0;
-$somme_articles = 0;
-foreach ($facture_details as $detail) {
-    $nombre_articles += $detail['quantite'];
-    $somme_articles++;
-}
-
 // Fonction pour convertir les montants en lettres
 function numberToWords($number) {
     $units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
@@ -79,22 +71,6 @@ function numberToWords($number) {
     }
     
     $words = '';
-    
-    // Milliards
-    if ($number >= 1000000000) {
-        $words .= numberToWords(floor($number / 1000000000)) . ' milliard';
-        if (floor($number / 1000000000) > 1) $words .= 's';
-        $number %= 1000000000;
-        if ($number > 0) $words .= ' ';
-    }
-    
-    // Millions
-    if ($number >= 1000000) {
-        $words .= numberToWords(floor($number / 1000000)) . ' million';
-        if (floor($number / 1000000) > 1) $words .= 's';
-        $number %= 1000000;
-        if ($number > 0) $words .= ' ';
-    }
     
     // Milliers
     if ($number >= 1000) {
@@ -139,10 +115,18 @@ function numberToWords($number) {
     return $words;
 }
 
+// Calculer les totaux
+$total_ht = $facture['Montant_Total_HT'] ?? 0;
+$tva_rate = $facture['Taux_TVA'] ?? 0;
+$total_tva = $total_ht * ($tva_rate / 100);
+$total_ttc = $total_ht + $total_tva;
+$remise = $facture['Remise'] ?? 0;
+$total_after_remise = $total_ttc - $remise;
+
 // Convertir le montant total en lettres
-$montant_en_lettres = numberToWords(floor($facture['Montant_Total_HT']));
+$montant_en_lettres = numberToWords(floor($total_after_remise));
 if ($montant_en_lettres) {
-    $montant_en_lettres = ucfirst($montant_en_lettres) . ' dhs';
+    $montant_en_lettres = $montant_en_lettres . ' dhs';
 }
 
 // Définir le titre de la page avec le numéro de facture
@@ -163,59 +147,67 @@ $pageTitle = "Facture " . $facture['Numero_Facture'];
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            font-size: 12pt;
-            line-height: 1.4;
+            font-size: 11pt;
+            line-height: 1.3;
         }
         .container {
             width: 100%;
             max-width: 210mm;
             margin: 0 auto;
             padding: 5mm;
+            position: relative;
+            min-height: 297mm; /* A4 height */
         }
         .header {
-            display: flex;
-            justify-content: space-between;
             margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
+            text-align: center;
         }
-        .logo {
-            font-size: 24pt;
+        .company-name {
+            font-size: 22pt;
             font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 0;
         }
-        .company-info {
-            text-align: right;
-            font-size: 10pt;
+        .company-name-arabic {
+            font-size: 16pt;
+            color: #4CAF50;
+            margin-top: 0;
         }
         .document-title {
-            text-align: center;
             font-size: 18pt;
             font-weight: bold;
-            margin: 20px 0;
+            margin-top: 10px;
+            text-align: center;
             text-transform: uppercase;
         }
-        .info-section {
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .info-box {
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            background-color: #f9f9f9;
+        }
+        .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 3px;
         }
-        .client-info, .invoice-info {
-            width: 48%;
-            border: 1px solid #ddd;
-            padding: 10px;
-        }
-        .info-title {
+        .info-label {
             font-weight: bold;
-            margin-bottom: 5px;
+            color: #333;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin: 15px 0;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
         }
         th {
@@ -228,54 +220,46 @@ $pageTitle = "Facture " . $facture['Numero_Facture'];
         .text-center {
             text-align: center;
         }
-        .summary {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .summary-left {
-            width: 60%;
-        }
-        .summary-right {
-            width: 35%;
-            border: 1px solid #ddd;
-            padding: 10px;
+        .totals {
+            margin-top: 10px;
+            text-align: right;
         }
         .total-row {
+            margin: 5px 0;
+        }
+        .total-label {
+            display: inline-block;
+            width: 120px;
+            text-align: left;
+        }
+        .total-value {
+            display: inline-block;
+            width: 100px;
+            text-align: right;
             font-weight: bold;
-            font-size: 14pt;
+        }
+        .amount-in-words {
+            margin: 15px 0;
+            font-style: italic;
         }
         .footer {
-            margin-top: 40px;
+            position: absolute;
+            bottom: 10mm;
+            left: 0;
+            right: 0;
             text-align: center;
-            font-size: 10pt;
-            color: #666;
+            font-size: 9pt;
+            color: #333;
             border-top: 1px solid #ddd;
-            padding-top: 10px;
+            padding-top: 5px;
         }
-        .signature {
-            margin-top: 40px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .signature-box {
-            width: 45%;
-            height: 80px;
-            border: 1px solid #ddd;
-            padding: 10px;
-        }
-        .signature-title {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 50px;
+        .signature-area {
+            margin-top: 30px;
+            margin-bottom: 60px;
         }
         @media print {
             .no-print {
                 display: none;
-            }
-            body {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
             }
         }
     </style>
@@ -283,124 +267,109 @@ $pageTitle = "Facture " . $facture['Numero_Facture'];
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">VOTRE ENTREPRISE</div>
-            <div class="company-info">
-                <p>ICE: 123456789000012</p>
-                <p>Adresse: 68 Rue Zanka Dahabia, Taswat 1 - El Attaouia</p>
-                <p>Tél: 06 24 70 39 49</p>
-            </div>
+            <h1 class="company-name">PHYTO AGHBALOU</h1>
+            <h2 class="company-name-arabic">فيتو أغبالو</h2>
         </div>
         
-        <div class="document-title">BON DE LIVRAISON FACTURE</div>
+        <div class="document-title">BON FACTURE</div>
         
-        <div class="info-section">
-            <div class="client-info">
-                <div class="info-title">Client:</div>
-                <p><?php echo htmlspecialchars($facture['Nom_Client']); ?></p>
-                <p>Code client: <?php echo htmlspecialchars($facture['client_code'] ?? 'CL-' . $facture['client_id']); ?></p>
-                <p>Adresse: <?php echo htmlspecialchars($facture['adresse'] ?? ''); ?></p>
-                <p>Tél: <?php echo htmlspecialchars($facture['telephone'] ?? ''); ?></p>
+        <div class="info-grid">
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Reference de facture</span>
+                    <span>: <?php echo htmlspecialchars($facture['Numero_Facture']); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date de facture</span>
+                    <span>: <?php echo date('Y-m-d', strtotime($facture['Date_Facture'])); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Statut règlement</span>
+                    <span>: <?php echo $facture['Statut_Facture'] === 'Payée' ? 'Réglé' : 'Non réglé'; ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mode de paiement</span>
+                    <span>: <?php echo htmlspecialchars($facture['Mode_Paiement'] ?? ''); ?></span>
+                </div>
             </div>
-            <div class="invoice-info">
-                <div class="info-title">Facture:</div>
-                <p>N° de BL facture: <?php echo htmlspecialchars($facture['Numero_Facture']); ?></p>
-                <p>Date de facture: <?php echo date('d/m/Y', strtotime($facture['Date_Facture'])); ?></p>
-                <p>Date d'échéance: <?php echo date('d/m/Y', strtotime($facture['Date_Facture'] . ' +30 days')); ?></p>
-                <p>Mode de paiement: <?php echo htmlspecialchars($facture['Mode_Paiement'] ?? 'ESPECE'); ?></p>
-                <p>Vendeur: <?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Vendeur'); ?></p>
+            
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Code client</span>
+                    <span>: <?php echo htmlspecialchars($facture['client_id']); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Client</span>
+                    <span>: <?php echo htmlspecialchars($facture['Nom_Client']); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Adresse</span>
+                    <span>: <?php echo htmlspecialchars($facture['adresse'] ?? 'Aghbalou'); ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Téléphone</span>
+                    <span>: <?php echo htmlspecialchars($facture['telephone'] ?? ''); ?></span>
+                </div>
             </div>
         </div>
         
         <table>
             <thead>
                 <tr>
-                    <th>Quantité</th>
                     <th>Désignation</th>
-                    <th>Prix Unit. TTC</th>
-                    <th>Nbr Pièces par Carton</th>
-                    <th>Montant TTC</th>
+                    <th class="text-center">Quantité</th>
+                    <th class="text-right">Prix TTC</th>
+                    <th class="text-right">Montant TTC</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($facture_details as $detail): ?>
                     <tr>
+                        <td><?php echo htmlspecialchars($detail['designation'] ?? 'produit'); ?></td>
                         <td class="text-center"><?php echo $detail['quantite']; ?></td>
-                        <td><?php echo htmlspecialchars($detail['designation']); ?></td>
-                        <td class="text-right"><?php echo number_format($detail['prix_unitaire'], 2, ',', ' '); ?></td>
-                        <td class="text-center">1</td>
-                        <td class="text-right"><?php echo number_format($detail['montant_ht'], 2, ',', ' '); ?></td>
+                        <td class="text-right"><?php echo number_format($detail['prix_unitaire'], 1); ?></td>
+                        <td class="text-right"><?php echo number_format($detail['montant_ht'], 1); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         
-        <div class="summary">
-            <div class="summary-left">
-                <p>Nombre d'articles: <?php echo $somme_articles; ?></p>
-                <p>Somme d'articles: <?php echo $nombre_articles; ?></p>
-                <p>Arrêtée la présente facture à la somme de:</p>
-                <p><strong><?php echo $montant_en_lettres; ?></strong></p>
+        <div class="amount-in-words">
+            <strong>Arrêtée la présente facture à la somme de :</strong>
+            <div><?php echo $montant_en_lettres; ?></div>
+        </div>
+        
+        <div class="totals">
+            <div class="total-row">
+                <span class="total-label">Total Hors Taxe :</span>
+                <span class="total-value"><?php echo number_format($total_ht, 1); ?> DH</span>
             </div>
-            <div class="summary-right">
-                <table style="width: 100%; border: none;">
-                    <tr>
-                        <td>Total TTC:</td>
-                        <td class="text-right"><?php echo number_format($facture['Montant_Total_HT'], 2, ',', ' '); ?> Dhs</td>
-                    </tr>
-                    <tr>
-                        <td>Paiements:</td>
-                        <td class="text-right"><?php echo $facture['Statut_Facture'] === 'Payée' ? number_format($facture['Montant_Total_HT'], 2, ',', ' ') : '0,00'; ?> Dhs</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td>Reste à payer:</td>
-                        <td class="text-right"><?php echo $facture['Statut_Facture'] === 'Payée' ? '0,00' : number_format($facture['Montant_Total_HT'], 2, ',', ' '); ?> Dhs</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td>Total reste:</td>
-                        <td class="text-right"><?php echo $facture['Statut_Facture'] === 'Payée' ? '0,00' : number_format($facture['Montant_Total_HT'], 2, ',', ' '); ?> Dhs</td>
-                    </tr>
-                </table>
+            <div class="total-row">
+                <span class="total-label">Total Remise :</span>
+                <span class="total-value"><?php echo number_format($remise, 1); ?> DH</span>
+            </div>
+            <div class="total-row">
+                <span class="total-label">TVA :</span>
+                <span class="total-value"><?php echo number_format($total_tva, 1); ?> DH</span>
+            </div>
+            <div class="total-row" style="font-size: 14pt;">
+                <span class="total-label">Total :</span>
+                <span class="total-value"><?php echo number_format($total_after_remise, 1); ?> DH</span>
             </div>
         </div>
         
-        <div class="signature">
-            <div class="signature-box">
-                <div class="signature-title">Signature Client</div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">Signature Vendeur</div>
-            </div>
+        <div class="signature-area">
+            <!-- Signature space -->
         </div>
         
         <div class="footer">
-            <p>Tél: 06 24 70 39 49 - ﺔﻳﻭﺎﻄﻌﻟﺍ - ﺔﻴﺒﻳﺎﻫﺬﻟﺍ ﺔﻘﻧﺯ 68 ﻢﻗﺭ 1 ﺕﻭﺎﺴﺗ ﺔﺋﺰﺠﺗ</p>
+            <p>Sté Phytho Aghbalou. Adresse : boumia, Tél: 0666666666</p>
         </div>
         
         <div class="no-print" style="margin-top: 20px; text-align: center;">
-            <button id="printButton" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px;">Imprimer</button>
+            <button onclick="window.print();" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px;">Imprimer</button>
             <button onclick="window.close();" style="padding: 10px 20px; background-color: #f44336; color: white; border: none; cursor: pointer; font-size: 16px; margin-left: 10px;">Fermer</button>
         </div>
     </div>
-    
-    <script>
-        // Set the document title with invoice number
-        document.title = "<?php echo $pageTitle; ?>";
-        
-        // Handle print button click
-        document.getElementById('printButton').addEventListener('click', function() {
-            window.print();
-        });
-        
-        // Auto-print when page loads if requested via URL parameter
-        window.onload = function() {
-            // Check if auto-print parameter is set
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('print') && urlParams.get('print') === 'true') {
-                setTimeout(function() {
-                    window.print();
-                }, 500); // Small delay to ensure everything is loaded
-            }
-        };
-    </script>
 </body>
 </html>
