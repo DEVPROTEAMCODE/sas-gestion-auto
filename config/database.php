@@ -9,7 +9,7 @@ class Database {
     private $host = "localhost";
     private $db_name = "sas_reparation_auto";
     private $username = "root";
-    private $password = "";
+    private $password = "passwd";
     public $conn;
 
     /**
