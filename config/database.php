@@ -9,9 +9,9 @@ class Database {
     private $host = "localhost";
     private $db_name = "sas_reparation_auto";
     private $username = "root";
-    private $password = "passwd";
+    private $password = "";
     public $conn;
-
+   
     /**
      * Méthode pour se connecter à la base de données
      * @return PDO|null Retourne l'objet de connexion ou null en cas d'erreur
